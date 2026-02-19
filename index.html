@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bunny.js — Three.js Wrapper</title>
+
+  <link rel="icon" type="image/png" href="B.jpg">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --accent: #7fffb2;
+    --accent2: #a78bff;
+    --accent3: #ff7eb3;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --border: #252535;
+    --code-bg: #0e0e17;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(127,255,178,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(127,255,178,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Floating orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+    animation: drift 20s ease-in-out infinite;
+  }
+  .orb1 { width: 500px; height: 500px; background: var(--accent); top: -100px; left: -100px; animation-delay: 0s; }
+  .orb2 { width: 400px; height: 400px; background: var(--accent2); bottom: 10%; right: -100px; animation-delay: -7s; }
+  .orb3 { width: 300px; height: 300px; background: var(--accent3); top: 50%; left: 40%; animation-delay: -14s; }
+
+  @keyframes drift {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    33% { transform: translate(30px, -40px) scale(1.05); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+  }
+
+  /* Layout */
+  .layout {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Sidebar */
+  nav {
+    width: 260px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(16px);
+    padding: 32px 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .nav-logo {
+    padding: 0 28px 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .nav-logo h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .nav-logo span {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .nav-section {
+    padding: 0 28px;
+    margin-bottom: 28px;
+  }
+
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .nav-section a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    color: #9090a8;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 400;
+    margin-bottom: 2px;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .nav-section a:hover {
+    color: var(--text);
+    background: var(--surface2);
+    border-color: var(--border);
+  }
+
+  .nav-section a.active {
+    color: var(--accent);
+    background: rgba(127,255,178,0.06);
+    border-color: rgba(127,255,178,0.15);
+  }
+
+  .nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+
+  a.active .nav-dot { background: var(--accent); }
+
+  /* Main content */
+  main {
+    flex: 1;
+    min-width: 0;
+    padding: 60px 80px;
+    max-width: 900px;
+  }
+
+  /* Hero */
+  .hero {
+    margin-bottom: 80px;
+    padding-bottom: 60px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid rgba(127,255,178,0.3);
+    border-radius: 4px;
+    padding: 4px 10px;
+    margin-bottom: 24px;
+    letter-spacing: 0.08em;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .hero h1 {
+    font-size: clamp(56px, 8vw, 88px);
+    font-weight: 800;
+    letter-spacing: -3px;
+    line-height: 0.95;
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+
+  .hero h1 .gradient {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 60%, var(--accent3) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero p {
+    font-size: 18px;
+    color: #9090a8;
+    max-width: 520px;
+    line-height: 1.7;
+    font-weight: 400;
+    animation: fadeUp 0.6s ease 0.2s both;
+  }
+
+  .hero-badges {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+    animation: fadeUp 0.6s ease 0.3s both;
+  }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--surface);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Sections */
+  section {
+    margin-bottom: 72px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  section h2 {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    margin-bottom: 16px;
+    line-height: 1.1;
+  }
+
+  section > p {
+    color: #9090a8;
+    font-size: 16px;
+    line-height: 1.75;
+    margin-bottom: 28px;
+    max-width: 620px;
+    font-weight: 400;
+  }
+
+  /* Method cards */
+  .method-group {
+    margin-bottom: 40px;
+  }
+
+  .method-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .method-card:hover {
+    border-color: rgba(127,255,178,0.2);
+  }
+
+  .method-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .method-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .method-sig {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .method-tag {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+    font-weight: 400;
+  }
+
+  .tag-async { color: var(--accent2); border-color: rgba(167,139,255,0.3); background: rgba(167,139,255,0.06); }
+  .tag-method { color: var(--accent); border-color: rgba(127,255,178,0.3); background: rgba(127,255,178,0.06); }
+  .tag-returns { color: var(--accent3); border-color: rgba(255,126,179,0.3); background: rgba(255,126,179,0.06); }
+
+  .method-body {
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .method-desc {
+    font-size: 14px;
+    color: #9090a8;
+    line-height: 1.7;
+    padding: 16px 0 14px;
+    font-weight: 400;
+  }
+
+  /* Params table */
+  .params-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+
+  .params-table th {
+    text-align: left;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    background: var(--code-bg);
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  .params-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(37,37,53,0.5);
+    vertical-align: top;
+  }
+
+  .params-table tr:last-child td { border-bottom: none; }
+
+  .param-name { color: var(--accent2); }
+  .param-type { color: var(--accent3); }
+  .param-default { color: var(--muted); }
+  .param-desc { color: #9090a8; font-family: 'Syne', sans-serif; font-size: 13px; }
+
+  /* Code blocks */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    overflow-x: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    position: relative;
+  }
+
+  pre .copy-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  pre .copy-btn:hover {
+    color: var(--accent);
+    border-color: rgba(127,255,178,0.3);
+  }
+
+  .kw { color: var(--accent2); }
+  .fn { color: var(--accent); }
+  .str { color: var(--accent3); }
+  .cm { color: var(--muted); font-style: italic; }
+  .num { color: #ffb86c; }
+  .cls { color: #8be9fd; }
+
+  /* Light types grid */
+  .lights-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .light-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.2s;
+  }
+
+  .light-card:hover {
+    border-color: rgba(167,139,255,0.25);
+    transform: translateY(-2px);
+  }
+
+  .light-card-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent2);
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .light-card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  /* Geometry grid */
+  .geo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .geo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+  }
+
+  .geo-card:hover {
+    border-color: rgba(127,255,178,0.2);
+    transform: translateX(3px);
+  }
+
+  .geo-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .geo-info { min-width: 0; }
+
+  .geo-method {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .geo-type {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Callout */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(127,255,178,0.04);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 14px;
+    color: #9090a8;
+  }
+
+  .callout strong { color: var(--accent); font-weight: 600; }
+
+  .callout-warn {
+    border-color: var(--accent3);
+    background: rgba(255,126,179,0.04);
+  }
+  .callout-warn strong { color: var(--accent3); }
+
+  /* Quick start */
+  .quickstart {
+    background: linear-gradient(135deg, rgba(127,255,178,0.05), rgba(167,139,255,0.05));
+    border: 1px solid rgba(127,255,178,0.15);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 40px;
+  }
+
+  .quickstart h3 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 16px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 900px) {
+    nav { display: none; }
+    main { padding: 40px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <nav>
+    <div class="nav-logo">
+      <h1>Bunny</h1>
+      <span>Three.js Wrapper</span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Getting Started</div>
+      <a href="#overview" class="active"><span class="nav-dot"></span>Overview</a>
+      <a href="#quickstart"><span class="nav-dot"></span>Quick Start</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Core</div>
+      <a href="#cameras"><span class="nav-dot"></span>Cameras</a>
+      <a href="#renderer"><span class="nav-dot"></span>Renderer</a>
+      <a href="#controls"><span class="nav-dot"></span>Controls</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Scene</div>
+      <a href="#geometry"><span class="nav-dot"></span>Geometry</a>
+      <a href="#lighting"><span class="nav-dot"></span>Lighting</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Loaders</div>
+      <a href="#loaders"><span class="nav-dot"></span>GLTF / OBJ / SVG</a>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main>
+
+    <!-- Hero -->
+    <div class="hero" id="overview">
+      <div class="hero-tag">v1.0 · Three.js Wrapper</div>
+      <h1><span class="gradient">Bunny</span><br>Three.js,<br>simplified.</h1>
+      <p>A lightweight class wrapper that strips Three.js boilerplate so you can focus on building scenes, not wiring up renderers.</p>
+      <div class="hero-badges">
+        <span class="badge">WebGL</span>
+        <span class="badge">GLTF · OBJ · SVG</span>
+        <span class="badge">OrbitControls</span>
+        <span class="badge">7 geometries</span>
+        <span class="badge">8 light types</span>
+      </div>
+    </div>
+
+    <!-- Quick start -->
+    <section id="quickstart">
+      <div class="section-label">Getting Started</div>
+      <h2>Quick Start</h2>
+      <p>A full 3D scene in under 15 lines.</p>
+
+      <div class="quickstart">
+        <h3>Minimal scene</h3>
+        <pre><button class="copy-btn" onclick="copyCode(this)">copy</button><code><span class="kw">import</span> <span class="cls">Bunny</span> <span class="kw">from</span> <span class="str">'./bunny-3d/bunny/bunny.js'</span>;
+
+<span class="kw">const</span> app = <span class="kw">new</span> <span class="cls">Bunny</span>();
+app.<span class="fn">pCamera</span>();       <span class="cm">// perspective camera</span>
+app.<span class="fn">AddToDom</span>();      <span class="cm">// mount canvas</span>
+app.<span class="fn">addControls</span>();   <span class="cm">// orbit controls</span>
+
+app.<span class="fn">light</span>(<span class="str">'AmbientLight'</span>, <span class="num">0xffffff</span>, <span class="num">0.6</span>);
+app.<span class="fn">light</span>(<span class="str">'DirectionalLight'</span>, <span class="num">0xffffff</span>, <span class="num">1</span>);
+
+<span class="kw">const</span> box = app.<span class="fn">sCube</span>(<span class="num">1</span>, <span class="num">1</span>, <span class="num">1</span>);
+
+<span class="kw">function</span> <span class="fn">animate</span>() {
+  requestAnimationFrame(animate);
+  box.rotation.y += <span class="num">0.01</span>;
+  app.controls.<span class="fn">update</span>();
+  app.<span class="fn">renderFrame</span>();
+}
+<span class="fn">animate</span>();</code></pre>
+      </div>
+    </section>
+
+    <!-- Cameras -->
+    <section id="cameras">
+      <div class="section-label">Core</div>
+      <h2>Cameras</h2>
+      <p>Choose a camera type before calling <code style="font-family:'DM Mono',monospace;color:var(--accent);font-size:14px">renderFrame()</code>. All cameras are added to the scene and positioned at z = 5 by default.</p>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">pCamera</span>
+          <span class="method-sig">( fov, aspect, near, far )</span>
+          <span class="method-tag tag-method">method</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a <strong>PerspectiveCamera</strong> — the standard camera for 3D scenes. Mimics how the human eye perceives depth.</div>
+          <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            <tr><td class="param-name">fov</td><td class="param-type">number</td><td class="param-default">75</td><td class="param-desc">Vertical field of view in degrees</td></tr>
+            <tr><td class="param-name">aspect</td><td class="param-type">number</td><td class="param-default">innerWidth / innerHeight</td><td class="param-desc">Canvas aspect ratio</td></tr>
+            <tr><td class="param-name">near</td><td class="param-type">number</td><td class="param-default">1</td><td class="param-desc">Near clipping plane distance</td></tr>
+            <tr><td class="param-name">far</td><td class="param-type">number</td><td class="param-default">1000</td><td class="param-desc">Far clipping plane distance</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">oCamera</span>
+          <span class="method-sig">( left, right, top, bottom, near, far )</span>
+          <span class="method-tag tag-method">method</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates an <strong>OrthographicCamera</strong>. No perspective distortion — great for 2D scenes, UI overlays, and isometric views.</div>
+          <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            <tr><td class="param-name">left</td><td class="param-type">number</td><td class="param-default">-innerWidth/2</td><td class="param-desc">Left frustum plane</td></tr>
+            <tr><td class="param-name">right</td><td class="param-type">number</td><td class="param-default">innerWidth/2</td><td class="param-desc">Right frustum plane</td></tr>
+            <tr><td class="param-name">top</td><td class="param-type">number</td><td class="param-default">innerHeight/2</td><td class="param-desc">Top frustum plane</td></tr>
+            <tr><td class="param-name">bottom</td><td class="param-type">number</td><td class="param-default">-innerHeight/2</td><td class="param-desc">Bottom frustum plane</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">cubeCamera</span>
+          <span class="method-sig">( near, far, resolution )</span>
+          <span class="method-tag tag-method">method</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a <strong>CubeCamera</strong> for real-time environment mapping and reflections. Resolution defaults to 256.</div>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">arrayCamera</span>
+          <span class="method-sig">( cameras[] )</span>
+          <span class="method-tag tag-method">method</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates an <strong>ArrayCamera</strong> for multi-viewport rendering. Pass an array of PerspectiveCameras.</div>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">stereoCamera</span>
+          <span class="method-sig">()</span>
+          <span class="method-tag tag-method">method</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a <strong>StereoCamera</strong> for VR and anaglyphic 3D effects. Does not add to scene automatically.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Renderer -->
+    <section id="renderer">
+      <h2>Renderer</h2>
+      <p>Mounts the WebGL canvas and drives the render loop.</p>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">AddToDom</span>
+          <span class="method-sig">()</span>
+          <span class="method-tag tag-method">method</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Appends the WebGL canvas to <code style="font-family:'DM Mono',monospace;color:var(--accent3);font-size:13px">document.body</code>, sets pixel ratio (capped at 2), and attaches a resize listener that keeps the canvas and camera in sync.</div>
+          <div class="callout"><strong>Note:</strong> Call this once after creating your camera. The resize handler is included — you don't need to call <code style="font-family:'DM Mono',monospace">handleResize()</code> separately.</div>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">renderFrame</span>
+          <span class="method-sig">()</span>
+          <span class="method-tag tag-method">method</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Renders one frame. Throws if no camera has been initialized. Call inside a <code style="font-family:'DM Mono',monospace;color:var(--accent3);font-size:13px">requestAnimationFrame</code> loop.</div>
+          <pre><code><span class="kw">function</span> <span class="fn">animate</span>() {
+  requestAnimationFrame(animate);
+  app.<span class="fn">renderFrame</span>();
+}
+<span class="fn">animate</span>();</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Controls -->
+    <section id="controls">
+      <h2>Controls</h2>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">addControls</span>
+          <span class="method-sig">( enableDamping )</span>
+          <span class="method-tag tag-method">method</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Attaches <strong>OrbitControls</strong> to the active camera, enabling mouse/touch pan, zoom, and orbit. Requires a camera to exist first.</div>
+          <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            <tr><td class="param-name">enableDamping</td><td class="param-type">boolean</td><td class="param-default">true</td><td class="param-desc">Smooth inertia on orbit movement</td></tr>
+          </table>
+          <div class="callout callout-warn"><strong>Important:</strong> When damping is enabled, call <code style="font-family:'DM Mono',monospace">app.controls.update()</code> inside your animation loop or controls won't work correctly.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Geometry -->
+    <section id="geometry">
+      <div class="section-label">Scene</div>
+      <h2>Geometry</h2>
+      <p>All methods create a <strong>MeshStandardMaterial</strong> mesh, add it to the scene, and return the mesh for further manipulation. Every method accepts an optional hex color and texture map as the last two parameters.</p>
+
+      <div class="geo-grid">
+        <div class="geo-card"><span class="geo-icon">⬛</span><div class="geo-info"><div class="geo-method">sCube()</div><div class="geo-type">BoxGeometry</div></div></div>
+        <div class="geo-card"><span class="geo-icon">▬</span><div class="geo-info"><div class="geo-method">sPlane()</div><div class="geo-type">PlaneGeometry</div></div></div>
+        <div class="geo-card"><span class="geo-icon">⚽</span><div class="geo-info"><div class="geo-method">sSphere()</div><div class="geo-type">SphereGeometry</div></div></div>
+        <div class="geo-card"><span class="geo-icon">💊</span><div class="geo-info"><div class="geo-method">sCapsule()</div><div class="geo-type">CapsuleGeometry</div></div></div>
+        <div class="geo-card"><span class="geo-icon">🥫</span><div class="geo-info"><div class="geo-method">sCylinder()</div><div class="geo-type">CylinderGeometry</div></div></div>
+        <div class="geo-card"><span class="geo-icon">🔺</span><div class="geo-info"><div class="geo-method">sCone()</div><div class="geo-type">ConeGeometry</div></div></div>
+        <div class="geo-card"><span class="geo-icon">🍩</span><div class="geo-info"><div class="geo-method">sTorus()</div><div class="geo-type">TorusGeometry</div></div></div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">sCube</span>
+          <span class="method-sig">( w, h, d, segX, segY, segZ, color, map )</span>
+          <span class="method-tag tag-returns">→ Mesh</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a box. First three params are width, height, depth. Segment params control subdivision density.</div>
+          <pre><code><span class="kw">const</span> box = app.<span class="fn">sCube</span>(<span class="num">2</span>, <span class="num">1</span>, <span class="num">1</span>, <span class="num">1</span>, <span class="num">1</span>, <span class="num">1</span>, <span class="num">0x3a7bc8</span>);
+box.position.set(<span class="num">0</span>, <span class="num">0.5</span>, <span class="num">0</span>);</code></pre>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">sPlane</span>
+          <span class="method-sig">( w, h, segW, segH, color, map )</span>
+          <span class="method-tag tag-returns">→ Mesh</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a flat plane. Rotate it to use as a floor.</div>
+          <pre><code><span class="kw">const</span> floor = app.<span class="fn">sPlane</span>(<span class="num">20</span>, <span class="num">20</span>, <span class="num">1</span>, <span class="num">1</span>, <span class="num">0x444444</span>);
+floor.rotation.x = -Math.PI / <span class="num">2</span>;</code></pre>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">sSphere</span>
+          <span class="method-sig">( radius, widthSeg, heightSeg, color, map )</span>
+          <span class="method-tag tag-returns">→ Mesh</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a sphere. Higher segment counts produce smoother geometry.</div>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">sCapsule</span>
+          <span class="method-sig">( radius, length, capSeg, radSeg, color, map )</span>
+          <span class="method-tag tag-returns">→ Mesh</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a capsule (cylinder with rounded caps). Useful for character colliders and stylized shapes.</div>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">sCylinder</span>
+          <span class="method-sig">( rTop, rBot, h, radSeg, hSeg, color, map )</span>
+          <span class="method-tag tag-returns">→ Mesh</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a cylinder. Set rTop and rBot to different values for a tapered shape.</div>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">sCone</span>
+          <span class="method-sig">( radius, h, radSeg, hSeg, color, map )</span>
+          <span class="method-tag tag-returns">→ Mesh</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a cone shape.</div>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">sTorus</span>
+          <span class="method-sig">( radius, tube, radSeg, tubeSeg, color, map )</span>
+          <span class="method-tag tag-returns">→ Mesh</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates a donut/torus shape. <code style="font-family:'DM Mono',monospace;color:var(--accent3);font-size:13px">radius</code> is the ring radius, <code style="font-family:'DM Mono',monospace;color:var(--accent3);font-size:13px">tube</code> is the tube thickness.</div>
+        </div>
+      </div>
+
+      <!-- Texture example -->
+      <h3 style="font-size:18px;font-weight:700;letter-spacing:-0.5px;margin:28px 0 12px;color:var(--text)">Using Textures</h3>
+      <pre><code><span class="kw">const</span> loader = <span class="kw">new</span> THREE.<span class="cls">TextureLoader</span>();
+<span class="kw">const</span> tex = loader.<span class="fn">load</span>(<span class="str">'texture.png'</span>);
+<span class="kw">const</span> sphere = app.<span class="fn">sSphere</span>(<span class="num">1</span>, <span class="num">64</span>, <span class="num">32</span>, <span class="num">0xffffff</span>, tex);</code></pre>
+    </section>
+
+    <!-- Lighting -->
+    <section id="lighting">
+      <h2>Lighting</h2>
+      <p>All lights are added to the scene and returned for further configuration like positioning.</p>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">light</span>
+          <span class="method-sig">( type, color, intensity, distance, angle, penumbra, decay )</span>
+          <span class="method-tag tag-returns">→ Light</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Creates and adds a light by type string. Throws if an unsupported type is passed.</div>
+          <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            <tr><td class="param-name">type</td><td class="param-type">string</td><td class="param-default">—</td><td class="param-desc">Light type string (see below)</td></tr>
+            <tr><td class="param-name">color</td><td class="param-type">hex</td><td class="param-default">0xffffff</td><td class="param-desc">Light color</td></tr>
+            <tr><td class="param-name">intensity</td><td class="param-type">number</td><td class="param-default">1</td><td class="param-desc">Light brightness</td></tr>
+            <tr><td class="param-name">distance</td><td class="param-type">number</td><td class="param-default">0</td><td class="param-desc">Max range (PointLight, SpotLight)</td></tr>
+            <tr><td class="param-name">angle</td><td class="param-type">number</td><td class="param-default">π/3</td><td class="param-desc">Cone angle in radians (SpotLight)</td></tr>
+            <tr><td class="param-name">penumbra</td><td class="param-type">number</td><td class="param-default">0</td><td class="param-desc">Soft edge fraction (SpotLight)</td></tr>
+            <tr><td class="param-name">decay</td><td class="param-type">number</td><td class="param-default">1</td><td class="param-desc">Attenuation rate</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="lights-grid">
+        <div class="light-card"><div class="light-card-name">AmbientLight</div><div class="light-card-desc">Uniform fill light. No direction, no shadows. Good base layer.</div></div>
+        <div class="light-card"><div class="light-card-name">DirectionalLight</div><div class="light-card-desc">Parallel rays from infinite distance. Great for sunlight.</div></div>
+        <div class="light-card"><div class="light-card-name">HemisphereLight</div><div class="light-card-desc">Sky/ground gradient. Natural outdoor ambience.</div></div>
+        <div class="light-card"><div class="light-card-name">PointLight</div><div class="light-card-desc">Omnidirectional point source. Like a light bulb.</div></div>
+        <div class="light-card"><div class="light-card-name">SpotLight</div><div class="light-card-desc">Cone-shaped beam with angle and soft penumbra edge.</div></div>
+        <div class="light-card"><div class="light-card-name">RectAreaLight</div><div class="light-card-desc">Rectangular area light. Default 10×10 size.</div></div>
+        <div class="light-card"><div class="light-card-name">AmbientLightProbe</div><div class="light-card-desc">IBL ambient contribution from a light probe.</div></div>
+        <div class="light-card"><div class="light-card-name">HemisphereLightProbe</div><div class="light-card-desc">Hemisphere-based light probe for natural fills.</div></div>
+      </div>
+
+      <pre><code><span class="cm">// Typical setup</span>
+app.<span class="fn">light</span>(<span class="str">'AmbientLight'</span>, <span class="num">0xffffff</span>, <span class="num">0.5</span>);
+<span class="kw">const</span> sun = app.<span class="fn">light</span>(<span class="str">'DirectionalLight'</span>, <span class="num">0xfffae0</span>, <span class="num">1.5</span>);
+sun.position.<span class="fn">set</span>(<span class="num">5</span>, <span class="num">10</span>, <span class="num">5</span>);
+sun.castShadow = <span class="kw">true</span>;</code></pre>
+    </section>
+
+    <!-- Loaders -->
+    <section id="loaders">
+      <div class="section-label">Loaders</div>
+      <h2>Asset Loaders</h2>
+      <p>Three async methods for importing 3D and vector assets directly into your scene.</p>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">gltf</span>
+          <span class="method-sig">( url )</span>
+          <span class="method-tag tag-async">async</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Loads a <strong>.gltf or .glb</strong> model via GLTFLoader. Adds the model's scene to the Bunny scene and returns the full gltf object. Errors are caught and logged.</div>
+          <pre><code><span class="kw">const</span> model = <span class="kw">await</span> app.<span class="fn">gltf</span>(<span class="str">'./models/character.glb'</span>);
+model.scene.position.<span class="fn">set</span>(<span class="num">0</span>, -<span class="num">1</span>, <span class="num">0</span>);
+model.scene.scale.<span class="fn">setScalar</span>(<span class="num">0.5</span>);</code></pre>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">obj</span>
+          <span class="method-sig">( url )</span>
+          <span class="method-tag tag-async">async</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Loads a <strong>.obj</strong> model via OBJLoader. The object is added to the scene automatically. Note: OBJ does not include materials — pair with MTLLoader manually if needed.</div>
+          <pre><code><span class="kw">await</span> app.<span class="fn">obj</span>(<span class="str">'./models/mesh.obj'</span>);</code></pre>
+        </div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-header">
+          <span class="method-name">svg</span>
+          <span class="method-sig">( url )</span>
+          <span class="method-tag tag-async">async</span>
+        </div>
+        <div class="method-body">
+          <div class="method-desc">Loads an <strong>.svg</strong> file via SVGLoader and extrudes each path into 3D geometry using <code style="font-family:'DM Mono',monospace;color:var(--accent3);font-size:13px">ShapeGeometry</code>. Colors from the SVG are preserved. All shapes are grouped and added to the scene.</div>
+          <div class="callout"><strong>Note:</strong> SVG shapes are flat (no depth). Rotate or reposition the returned group to place it in your scene.</div>
+          <pre><code><span class="kw">await</span> app.<span class="fn">svg</span>(<span class="str">'./logo.svg'</span>);</code></pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // Copy code button
+  function copyCode(btn) {
+    const code = btn.nextSibling.textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = 'copied!';
+      btn.style.color = 'var(--accent)';
+      setTimeout(() => { btn.textContent = 'copy'; btn.style.color = ''; }, 2000);
+    });
+  }
+
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section, .hero');
+  const navLinks = document.querySelectorAll('nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const id = entry.target.id;
+        const active = document.querySelector(`nav a[href="#${id}"]`);
+        if (active) {
+          active.classList.add('active');
+          active.querySelector('.nav-dot').style.background = 'var(--accent)';
+        }
+        navLinks.forEach(a => {
+          if (!a.classList.contains('active')) {
+            a.querySelector('.nav-dot').style.background = '';
+          }
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
